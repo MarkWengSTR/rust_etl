@@ -1,53 +1,51 @@
-extern crate elastic;
+//! This sample is a more fleshed out application using `elastic`.
+//!
+//! It expects you have an Elasticsearch node running on `localhost:9200`.
 
+#[macro_use]
+extern crate elastic_derive;
+#[macro_use]
+extern crate quick_error;
+#[macro_use]
+extern crate serde_derive;
+
+extern crate elastic;
 #[macro_use]
 extern crate serde_json;
 
-use elastic::prelude::*;
-use serde_json::Value;
+pub mod model;
+pub mod ops;
+
+use ops::{
+    // commands::{
+    //     EnsureBankIndexExists,
+    //     PutBulkAccounts,
+    // },
+    queries::SimpleSearchQuery,
+    Client,
+};
 use std::error::Error;
 
 fn run() -> Result<(), Box<dyn Error>> {
-    let client = SyncClient::builder()
-        .static_node("http://192.168.3.122:9200")
-        .build()?;
+    let client = Client::new("http://192.168.3.122:9200")?;
 
-    let res = client
-        .search::<Value>()
-        .index("logstash-syslog-2021.03.17")
-        .body(json!({
-            "query": {
-                "bool": {
-                    "must": [
-                        {"regexp": {
-                            "syslog_hostname.raw": {
-                                "value": ".*ASR.*"
-                            }
-                        }}
-                    ],
-                    "filter": [
-                        {"range": {
-                            "@timestamp": {
-                                "gte": "now-15m/m",
-                                "lt": "now/m"
-                            }
-                        }}
-                    ]
-                }
-            }
-        }))
-        .send()?;
+    // println!("checking index");
 
-    for hit in res.hits() {
-        println!("{:?}", hit)
+    // client.ensure_bank_index_exists()?;
+
+    // println!("updating docs");
+
+    // client.put_bulk_accounts("data/accounts.json")?;
+
+    let accounts = client.simple_search_query()?;
+
+    for account in accounts.hits() {
+        println!("{:?}", account);
     }
-
-    println!("{:?}", res);
 
     Ok(())
 }
 
-
 fn main() {
-    run().unwrap();
+    run().unwrap()
 }
